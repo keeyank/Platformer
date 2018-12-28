@@ -12,13 +12,11 @@ public class Player : Body
         base.Update();
 
         // Move player each frame if keys are held down
-        if (Input.GetKey(KeyCode.D))
-        {
+        if (Input.GetKey(KeyCode.D)) {
             MoveBody(Vector2.right, speed);
         }
 
-        if (Input.GetKey(KeyCode.A))
-        {
+        if (Input.GetKey(KeyCode.A)) {
             MoveBody(Vector2.left, speed);
         }
     }

@@ -62,6 +62,7 @@
   <ItemGroup>
     <Compile Include="Assets\Body.cs" />
     <Compile Include="Assets\ExtDebug.cs" />
+    <Compile Include="Assets\ExtMathf.cs" />
     <Compile Include="Assets\Player.cs" />
     <Reference Include="Unity.TextMeshPro.Editor">
       <HintPath>/Users/keeyan/Documents/Unity Games/Platformer/Platformer/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
