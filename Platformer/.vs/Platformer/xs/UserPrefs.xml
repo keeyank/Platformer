@@ -1,9 +1,8 @@
 ﻿<Properties StartupConfiguration="{100AE41E-9853-00A1-0814-C759729749EB}|">
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/ExtMathf.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/PhysicsObject.cs">
     <Files>
-      <File FileName="Assets/Player.cs" Line="19" Column="38" />
-      <File FileName="Assets/Body.cs" Line="28" Column="70" />
-      <File FileName="Assets/ExtMathf.cs" Line="7" Column="12" />
+      <File FileName="Assets/Player.cs" Line="10" Column="8" />
+      <File FileName="Assets/PhysicsObject.cs" Line="41" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
