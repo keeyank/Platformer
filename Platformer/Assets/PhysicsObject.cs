@@ -6,7 +6,7 @@ public class PhysicsObject : MonoBehaviour
 {
 
     // protected const float gravityScalar = 5;
-    public static float gravity = 0.1f;
+    public static float gravity = 0.01f;
 
     protected bool grounded;
     protected Rigidbody2D rb2d;
@@ -25,18 +25,20 @@ public class PhysicsObject : MonoBehaviour
         contactFilter.useLayerMask = true;
     }
 
-    void FixedUpdate() {
+    protected virtual void FixedUpdate() {
         // Simulate gravity
         Move(Vector2.down, gravity);
     }
 
     // Move object speed units towards direction
     // If there is a collidable in the way, object will not intersect it
+    // Grounded is updated each time gravity is calculated 
+    // ASSERTION: Called by FixedUpdate
     protected void Move(Vector2 direction, float speed) {
         Vector2 newPos = rb2d.position + (direction * speed);
 
         // Default grounded to false, set to true if a downwards collision is found
-        if (direction == Vector2.down) { grounded = false; }
+        if (direction == Vector2.down) { grounded = false; } // NOTE: Check notes at button (1)
 
         // Determine if there will be a collision
         int count = rb2d.Cast(direction, contactFilter, hitResults, speed);
@@ -114,3 +116,10 @@ public class PhysicsObject : MonoBehaviour
         rb2d.position = newPos;
     }
 }
+
+
+/* (1) 
+grounded is set to false here, which may seem like there is a point in time where grounded is false when it should be true (which will be computed later)
+But it works because we override fixed update in the player controller, and the grounded bool will be already calculated correctly by then since gravity
+is the very first thing that uses the moveBody function. This must be always the case - MoveBody must be used only in FixedUpdate and AFTER gravity is computed
+*/
