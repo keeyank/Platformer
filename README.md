@@ -6,13 +6,13 @@ The goal is for me to create a very simple platformer, inspired by games like Su
 
 One of the goals I had when I started this project was to fully create the physics myself and not use any of Unity's built in physics systems. Although it's really hard, so far I've been able to successfully replicate the physics that many platformer games use, all using my own unique code! 
 
-#Intended features:
+**Intended features:**
 - Simple platformer physics, including a gravity system and collision detection - ***Completed!***
 - Intuitive and smooth player controls
 - PS4 controller support
 - Simple grid based UI system to support easy level design
 - Level screen progression, and goalposts to finish levels
 
-#Optional features (if time permits):
+**Optional features (if time permits):**
 - Enemies with simple tracking AI
 - Menu screen and level select with unlockable levels
