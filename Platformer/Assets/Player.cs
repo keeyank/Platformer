@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class Player : PhysicsObject
 {
+    private float speed = 0.1f;
+
     // Must implement controllable movement here - AFTER grounded is computed
     protected override void FixedUpdate()
     {
@@ -11,19 +13,16 @@ public class Player : PhysicsObject
 
         // Must over
         if (Input.GetKey(KeyCode.D)) {
-            Move(Vector3.right, (float)0.01);
+            Move(Vector3.right, speed);
         }
         if (Input.GetKey(KeyCode.A)) {
-            Move(Vector3.left, (float)0.01);
+            Move(Vector3.left, speed);
         }
         if (Input.GetKey(KeyCode.W)) {
-            Move(Vector3.up, (float)0.02);
+            Move(Vector3.up, speed);
         }
         if (Input.GetKey(KeyCode.S)) {
-            Move(Vector3.down, (float)0.01);
-        }
-        if (Input.GetKey(KeyCode.Space)) {
-            Debug.Log(grounded);
+            Move(Vector3.down, speed);
         }
     }
 }

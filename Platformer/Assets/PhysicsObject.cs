@@ -4,9 +4,11 @@ using UnityEngine;
 
 public class PhysicsObject : MonoBehaviour
 {
+    private float gravityCurr = 0.01f;
 
-    // protected const float gravityScalar = 5;
-    public static float gravity = 0.01f;
+    private const float gravityMax = 0.15f;
+    private const float gravityMin = 0.01f;
+    private const float gravityMod = 0.005f;
 
     protected bool grounded;
     protected Rigidbody2D rb2d;
@@ -27,7 +29,10 @@ public class PhysicsObject : MonoBehaviour
 
     protected virtual void FixedUpdate() {
         // Simulate gravity
-        Move(Vector2.down, gravity);
+        Move(Vector2.down, gravityCurr);
+        if (gravityCurr < gravityMax) {
+            gravityCurr += gravityMod;
+        }
     }
 
     // Move object speed units towards direction
@@ -71,8 +76,7 @@ public class PhysicsObject : MonoBehaviour
                 // Add a .001 buffer - Makes user slightly float above tiles, but prevents unwanted collisions
                 newPos = new Vector2(newPos.x, maxPointY + extents.y + buffer);
                 grounded = true; // User is now touching ground
-
-                // Reset gravity here
+                gravityCurr = gravityMin;
             }
 
             else if (direction == Vector2.up) {
