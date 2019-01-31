@@ -4,13 +4,13 @@ using UnityEngine;
 
 public class PhysicsObject : MonoBehaviour
 {
-    private float gravityCurr = 0.01f;
-
-    private const float gravityMax = 0.15f;
-    private const float gravityMin = 0.01f;
-    private const float gravityMod = 0.005f;
+    protected float gravity = 0.15f;
+    protected float gravityCounteract;
+    private float decay = 0.005f;
 
     protected bool grounded;
+    private bool groundedLastFrame; // NOTE: Can ONLY be used here, will give an INCORRECT RESULT if used in any children of PhysicsObject
+                                    // (See FixedUpdate function to see why)
     protected Rigidbody2D rb2d;
     protected ContactFilter2D contactFilter;
     protected RaycastHit2D[] hitResults = new RaycastHit2D[16];
@@ -28,12 +28,28 @@ public class PhysicsObject : MonoBehaviour
     }
 
     protected virtual void FixedUpdate() {
-        // Simulate gravity
-        Move(Vector2.down, gravityCurr);
-        if (gravityCurr < gravityMax) {
-            gravityCurr += gravityMod;
-        }
+        SimulateGravity();
     }
+
+    // Pull object downards. Creates illusion of downwards acceleration
+    private void SimulateGravity() {
+        Move(Vector2.down, gravity);
+
+        // If physics body went from grounded state to not grounded,
+        // Add a decaying counteraction towards gravity
+        if (groundedLastFrame == true && grounded == false)
+        {
+            gravityCounteract = gravity;
+        }
+
+        // Counteract gravity if recently went from grounded to not grounded
+        Move(Vector2.up, gravityCounteract);
+        gravityCounteract -= decay;
+        if (gravityCounteract < 0) { gravityCounteract = 0; }
+
+        groundedLastFrame = grounded;
+    }
+
 
     // Move object speed units towards direction
     // If there is a collidable in the way, object will not intersect it
@@ -76,7 +92,8 @@ public class PhysicsObject : MonoBehaviour
                 // Add a .001 buffer - Makes user slightly float above tiles, but prevents unwanted collisions
                 newPos = new Vector2(newPos.x, maxPointY + extents.y + buffer);
                 grounded = true; // User is now touching ground
-                gravityCurr = gravityMin;
+
+                gravityCounteract = 0; // Reset gravity counteract here (2) for explanation
             }
 
             else if (direction == Vector2.up) {
@@ -123,7 +140,13 @@ public class PhysicsObject : MonoBehaviour
 
 
 /* (1) 
-grounded is set to false here, which may seem like there is a point in time where grounded is false when it should be true (which will be computed later)
-But it works because we override fixed update in the player controller, and the grounded bool will be already calculated correctly by then since gravity
-is the very first thing that uses the moveBody function. This must be always the case - MoveBody must be used only in FixedUpdate and AFTER gravity is computed
+* grounded is set to false here, which may seem like there is a point in time where grounded is false when it should be true (which will be computed later)
+* But it works because we override fixed update in the player controller, and the grounded bool will be already calculated correctly by then since gravity
+* is the very first thing that uses the moveBody function. This must be always the case - MoveBody must be used only in FixedUpdate and AFTER gravity is computed
 */
+
+/* (2)
+ * Here we set the counteract to 0. This is because if we don't set it to 0 and counteract is above 0, it will make the object go up after the initial downwards
+ * collision has occured - I.e., after the object is places on the platform due to gravity, it will be brought back up by exactly counteract points. 
+ * This is very easily fixed by simply setting the counteract to 0 every time the object is registered as grounded
+ */ 
