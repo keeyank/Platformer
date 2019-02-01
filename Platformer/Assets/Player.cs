@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Player : PhysicsObject
 {
-    private float speed = 0.1f;
+    private const float speed = 0.01f;
 
     // Must implement controllable movement here - AFTER grounded is computed
     protected override void FixedUpdate()
@@ -28,6 +28,11 @@ public class Player : PhysicsObject
         // DEBUG
         if (Input.GetKey(KeyCode.LeftShift)) {
             rb2d.position = new Vector2(1, 1);
+        }
+
+        if (grounded && Input.GetKeyDown(KeyCode.Space)) {
+            aboutToJump = true;
+            Debug.Log("Hi");
         }
     }
 }

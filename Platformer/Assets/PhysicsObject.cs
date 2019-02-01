@@ -2,12 +2,23 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// TODO: Bug with jumping - If jumpCounteract is ever less than 0.15, then since moveBody(down) is calculated first,
+// it will occur first and at this point it will reset gravityCounteract to 0 since the boolean there will return false
+// TODO: Bug - When jumping on a collidable above you by hugging it to the left, the second you get on top of it you will snap to it
+// This is because once end up so it's below you a little bit, the downward moveBody will occur and bring player to it and the boolean wont work
+// Solution to all this: Make it so that moveBody downwards actually does an upwards moveBody and does it by (gravity - gravityCounteract)
+// If gravityCounteract is greater, do Move(Vector2.up, (gravity - gravityCounteract) else do it downwards like normal
+// Also i think this will remove the need to use the aboutToJump boolean since player won't collide with the platform unless it's literally going downwards
+// Also this way we would remove the Move(Vector2.up, gravityCounteract) line. This is just a much better and more efficient implementation
 public class PhysicsObject : MonoBehaviour
 {
-    protected float gravity = 0.15f;
+    protected const float gravity = 0.15f;
     protected float gravityCounteract;
-    private float decay = 0.005f;
+    private const float decay = 0.005f;
 
+    protected float jumpCounteract = 0.15f; // TODO: should be different for each instance of a physics body so use a constructur to fix this
+                                
+    protected bool aboutToJump; // (3) for more info
     protected bool grounded;
     private bool groundedLastFrame; // NOTE: Can ONLY be used here, will give an INCORRECT RESULT if used in any children of PhysicsObject
                                     // (See FixedUpdate function to see why)
@@ -37,9 +48,8 @@ public class PhysicsObject : MonoBehaviour
 
         // If physics body went from grounded state to not grounded,
         // Add a decaying counteraction towards gravity
-        if (groundedLastFrame == true && grounded == false)
-        {
-            gravityCounteract = gravity;
+        if (groundedLastFrame == true && grounded == false) {
+            gravityCounteract += gravity;
         }
 
         // Counteract gravity if recently went from grounded to not grounded
@@ -93,7 +103,13 @@ public class PhysicsObject : MonoBehaviour
                 newPos = new Vector2(newPos.x, maxPointY + extents.y + buffer);
                 grounded = true; // User is now touching ground
 
-                gravityCounteract = 0; // Reset gravity counteract here (2) for explanation
+                if (aboutToJump) {
+                    gravityCounteract = jumpCounteract; // (3)
+                    aboutToJump = false;
+                }
+                else {
+                    gravityCounteract = 0; // (2)
+                }
             }
 
             else if (direction == Vector2.up) {
@@ -149,4 +165,10 @@ public class PhysicsObject : MonoBehaviour
  * Here we set the counteract to 0. This is because if we don't set it to 0 and counteract is above 0, it will make the object go up after the initial downwards
  * collision has occured - I.e., after the object is places on the platform due to gravity, it will be brought back up by exactly counteract points. 
  * This is very easily fixed by simply setting the counteract to 0 every time the object is registered as grounded
+ */ 
+
+/* (3)
+ * aboutToJump boolean is set to true whenever the player presses the space button. This means the gravity counter must be increased rather then set to 0 as it
+ * usually is. The player can also press space only when grounded. jumping will make them not grounded next frame, so the normal gravity counteract will be added
+ * additionally. 
  */ 
