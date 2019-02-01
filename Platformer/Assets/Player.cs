@@ -4,7 +4,11 @@ using UnityEngine;
 
 public class Player : PhysicsObject
 {
-    private const float speed = 0.01f;
+    // TODO: Change FixedUpdate to Update, start using Time.DeltaTime for corrections
+    // This is because some frames FixedUpdate won't run, and the space key won't be registered, so it isn't responsive
+    // This needs to be fixed!!!!
+
+    private const float speed = 0.1f;
 
     // Must implement controllable movement here - AFTER grounded is computed
     protected override void FixedUpdate()
@@ -31,8 +35,7 @@ public class Player : PhysicsObject
         }
 
         if (grounded && Input.GetKeyDown(KeyCode.Space)) {
-            aboutToJump = true;
-            Debug.Log("Hi");
+            gravityCounteract = jumpCounteract;
         }
     }
 }
