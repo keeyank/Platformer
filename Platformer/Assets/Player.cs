@@ -4,38 +4,34 @@ using UnityEngine;
 
 public class Player : PhysicsObject
 {
-    // TODO: Change FixedUpdate to Update, start using Time.DeltaTime for corrections
-    // This is because some frames FixedUpdate won't run, and the space key won't be registered, so it isn't responsive
-    // This needs to be fixed!!!!
+    private const float speed = 6f;
 
-    private const float speed = 0.1f;
-
-    // Must implement controllable movement here - AFTER grounded is computed
-    protected override void FixedUpdate()
+    protected override void Update()
     {
-        base.FixedUpdate();
+        UpdateGroundedHistory();
+        if (withinJumpBuffer && Input.GetKeyDown(KeyCode.Space)) {
+            gravityCounteract = jumpCounteract;
+            if (!grounded[0] && !grounded[1]) {
+                gravityCounteract += gravity; // (1)
+            }
+        }
+        SimulateGravity();
 
-        // Must over
         if (Input.GetKey(KeyCode.D)) {
-            Move(Vector3.right, speed);
+            Move(Vector3.right, speed * Time.deltaTime);
         }
         if (Input.GetKey(KeyCode.A)) {
-            Move(Vector3.left, speed);
-        }
-        //if (Input.GetKey(KeyCode.W)) {
-        //    Move(Vector3.up, speed);
-        //}
-        if (Input.GetKey(KeyCode.S)) {
-            Move(Vector3.down, speed);
+            Move(Vector3.left, speed * Time.deltaTime);
         }
 
         // DEBUG
         if (Input.GetKey(KeyCode.LeftShift)) {
             rb2d.position = new Vector2(1, 1);
         }
-
-        if (grounded && Input.GetKeyDown(KeyCode.Space)) {
-            gravityCounteract = jumpCounteract;
-        }
     }
 }
+
+/* (1)
+ * We have to do this if the user is falling and making use of the buffer to jump.
+ * If we don't, then gravityCounteract won't be added since grounded[1] isn't true.
+ */ 
