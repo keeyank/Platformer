@@ -9,12 +9,14 @@ public class Player : PhysicsObject
     protected override void Update()
     {
         UpdateGroundedHistory();
+
+        // Player requests a jump
         if (withinJumpBuffer && Input.GetKeyDown(KeyCode.Space)) {
-            gravityCounteract = jumpCounteract;
-            if (!grounded[0] && !grounded[1]) {
-                gravityCounteract += gravity; // (1)
+            if (withinJumpBuffer && !requestedJump) {
+                requestedJump = true;
             }
         }
+
         SimulateGravity();
 
         if (Input.GetKey(KeyCode.D)) {
@@ -30,8 +32,3 @@ public class Player : PhysicsObject
         }
     }
 }
-
-/* (1)
- * We have to do this if the user is falling and making use of the buffer to jump.
- * If we don't, then gravityCounteract won't be added since grounded[1] isn't true.
- */ 

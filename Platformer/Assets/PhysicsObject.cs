@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+//TODO: Move the code that sets gravityCounteract = 0 up to where grounded is being computed. I think that maeks more sense, but make sure it totally works
+// both logically and via testing before you commit to it, since this won't fix any current bugs and the games working fine at this state.
 public class PhysicsObject : MonoBehaviour
 {
     protected const float gravity = 10f;
@@ -12,8 +14,9 @@ public class PhysicsObject : MonoBehaviour
                                   // Player ends up slightly floating above platforms (corrected via platform hitboxes)
 
     protected float jumpCounteract = 15f; // TODO: should be different for each instance of a physics body so use a constructur to fix this
-    protected float jumpBuffer = 0.2f;
+    protected float jumpBuffer = 0.2f; // (3)
     protected bool withinJumpBuffer;
+    protected bool requestedJump;
 
 
     // grounded[0] represents grounded state at current frame,
@@ -66,8 +69,14 @@ public class PhysicsObject : MonoBehaviour
     // Pull object downards. Creates illusion of downwards acceleration
     protected void SimulateGravity() {
         // Increase gravityCounteract if user recently went to not grounded state
-        if (grounded[1] == true && grounded[0] == false) { 
+        if (grounded[1] && !grounded[0]) { 
             gravityCounteract += gravity; 
+        }
+
+        // If user is grounded and has previously requested a jump within their jumpBuffer, increase gravity counteract
+        if (grounded[0] && requestedJump) {
+            gravityCounteract = jumpCounteract;
+            requestedJump = false;
         }
 
         // Decay gravityCounteract each frame
@@ -177,8 +186,18 @@ public class PhysicsObject : MonoBehaviour
  */
 
 /* (2)
- * Here we set the counteract to 0. This is because if we don't set it to 0 and counteract is above 0, it will make the object go up after the initial downwards
- * collision has occured - I.e., after the object is places on the platform due to gravity, it will be brought back up by exactly counteract points. 
- * This is very easily fixed by simply setting the counteract to 0 every time the object is registered as grounded
- * We also set gravityCounteract to 15 whenever the an object collides with something above it, so the object can smoothly fall back down
+ * Gravitycounteract should be reset whenever a player is grounded
+ * We also set gravityCounteract to gravity whenever the an object collides with something above it, so the object can smoothly fall back down
+ */
+
+/* (3)
+ * When there is a large jump buffer, some weird stuff can happen via the input saving feature. 
+ * For example, a player can click jump and immediately click jump again. It's valid since the player is within the jump buffer since the jump just began
+ * However, this means that another jump has been requested, and the request will pull through much later when he actually lands.
+ * A possible fix might be to have it be automatically set to false after 3 frames if it was set to true the previous 3, in order to give the players exactly
+ * 3 frames of a safety net for their jumping. 
+ * However, these bugs only occur when the jump buffer is very large, and it's really difficult to do something like this when the jump buffer is small, so 
+ * it should be OK to not fix for now, unless another bug comes from it. 
+ * Also, if the player happens to click jump while in the jump buffer of a platform, then goes past it by going right and landing on another platform below it,
+ * this will also cause the player to jump.
  */
