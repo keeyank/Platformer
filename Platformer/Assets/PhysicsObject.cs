@@ -4,6 +4,8 @@ using UnityEngine;
 
 //TODO: Move the code that sets gravityCounteract = 0 up to where grounded is being computed. I think that maeks more sense, but make sure it totally works
 // both logically and via testing before you commit to it, since this won't fix any current bugs and the games working fine at this state.
+//TODO: It's kinda weird how (*) works, maybe make it so that can only happen if the player isn't currently jumping? (player starts jump when request fulfilled,
+// ends jump when the player becomes grounded)
 public class PhysicsObject : MonoBehaviour
 {
     protected const float gravity = 10f;
@@ -13,15 +15,16 @@ public class PhysicsObject : MonoBehaviour
     private float buffer = 0.01f; // Used to fix weird bug with collision detection
                                   // Player ends up slightly floating above platforms (corrected via platform hitboxes)
 
-    protected float jumpCounteract = 15f; // TODO: should be different for each instance of a physics body so use a constructur to fix this
+    protected float jumpCounteract = 25f; // TODO: should be different for each instance of a physics body so use a constructur to fix this
     protected float jumpBuffer = 0.2f; // (3)
     protected bool withinJumpBuffer;
     protected bool requestedJump;
 
 
-    // grounded[0] represents grounded state at current frame,
-    // grounded[1] represents grounded state 1 frame ago, grounded[2] represents grounded state 2 frames ago 
+    // grounded[0] represents grounded state at current frame, grounded[1] represents grounded state 1 frame ago, 
     protected bool[] grounded = new bool[2];
+    protected bool isJumping;
+
 
     protected Rigidbody2D rb2d;
     protected ContactFilter2D contactFilter;
@@ -42,6 +45,7 @@ public class PhysicsObject : MonoBehaviour
     protected virtual void Update() {
         UpdateGroundedHistory();
         SimulateGravity();
+
     }
 
     // Update grounded history, including current frame's grounded
@@ -56,6 +60,7 @@ public class PhysicsObject : MonoBehaviour
         int count = rb2d.Cast(Vector2.down, contactFilter, hitResults, buffer);
         if (CompatibleCollisionFound(hitResults, count, Vector2.down)) {
             grounded[0] = true;
+            isJumping = false; // Grounded -> user is not jumping
         }
 
         // Determine if user can jump this frame
@@ -69,13 +74,14 @@ public class PhysicsObject : MonoBehaviour
     // Pull object downards. Creates illusion of downwards acceleration
     protected void SimulateGravity() {
         // Increase gravityCounteract if user recently went to not grounded state
-        if (grounded[1] && !grounded[0]) { 
+        if (grounded[1] && !grounded[0] && !isJumping) { 
             gravityCounteract += gravity; 
         }
 
         // If user is grounded and has previously requested a jump within their jumpBuffer, increase gravity counteract
         if (grounded[0] && requestedJump) {
             gravityCounteract = jumpCounteract;
+            isJumping = true;
             requestedJump = false;
         }
 
@@ -175,9 +181,6 @@ public class PhysicsObject : MonoBehaviour
         return false;
     }
 }
-
-
-
 
 /* (1) 
  * grounded is set to false here, which may seem like there is a point in time where grounded is false when it should be true (which will be computed later)

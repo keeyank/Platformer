@@ -4,7 +4,10 @@ using UnityEngine;
 
 public class Player : PhysicsObject
 {
-    private const float speed = 6f;
+    private float currentSpeed = minSpeed;
+    private const float maxSpeed = 6f;
+    private const float minSpeed = 2f;
+    private const float acceleration = 0.5f;
 
     protected override void Update()
     {
@@ -20,10 +23,19 @@ public class Player : PhysicsObject
         SimulateGravity();
 
         if (Input.GetKey(KeyCode.D)) {
-            Move(Vector3.right, speed * Time.deltaTime);
+            currentSpeed += acceleration;
+            if (currentSpeed > maxSpeed) { currentSpeed = maxSpeed; }
+            Move(Vector3.right, currentSpeed * Time.deltaTime);
         }
+
         if (Input.GetKey(KeyCode.A)) {
-            Move(Vector3.left, speed * Time.deltaTime);
+            currentSpeed += acceleration;
+            if (currentSpeed > maxSpeed) { currentSpeed = maxSpeed; }
+            Move(Vector3.left, currentSpeed * Time.deltaTime);
+        }
+
+        if (Input.GetKeyUp(KeyCode.A) || Input.GetKeyUp(KeyCode.D)) {
+            currentSpeed = minSpeed;
         }
 
         // DEBUG
