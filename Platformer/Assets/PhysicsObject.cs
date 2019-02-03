@@ -4,8 +4,8 @@ using UnityEngine;
 
 //TODO: Move the code that sets gravityCounteract = 0 up to where grounded is being computed. I think that maeks more sense, but make sure it totally works
 // both logically and via testing before you commit to it, since this won't fix any current bugs and the games working fine at this state.
-//TODO: It's kinda weird how (*) works, maybe make it so that can only happen if the player isn't currently jumping? (player starts jump when request fulfilled,
-// ends jump when the player becomes grounded)
+// Also do the same thing with when gravityCounteract is set to gravity for upwards collisions
+//TODO: (5)
 public class PhysicsObject : MonoBehaviour
 {
     protected const float gravity = 10f;
@@ -17,12 +17,15 @@ public class PhysicsObject : MonoBehaviour
 
     protected float jumpCounteract = 25f; // TODO: should be different for each instance of a physics body so use a constructur to fix this
     protected float jumpBuffer = 0.2f; // (3)
-    protected bool withinJumpBuffer;
+    protected bool canRequestJump;
     protected bool requestedJump;
 
 
     // grounded[0] represents grounded state at current frame, grounded[1] represents grounded state 1 frame ago, 
-    protected bool[] grounded = new bool[2];
+    // Key assertion: If the object is in grounded[0] state, object is not in isJumping state
+    protected bool[] grounded = new bool[10];
+    protected int jumpFrameBuffer = 3; // Max amount of frames from when object falls off a ledge such canJump is true
+                                       // Must be at most the same size as the grounded array
     protected bool isJumping;
 
 
@@ -63,28 +66,40 @@ public class PhysicsObject : MonoBehaviour
             isJumping = false; // Grounded -> user is not jumping
         }
 
-        // Determine if user can jump this frame
-        withinJumpBuffer = false;
+        // Determine if user can jump this frame (4)
+        canRequestJump = false;
         count = rb2d.Cast(Vector2.down, contactFilter, hitResults, buffer + jumpBuffer);
-        if (CompatibleCollisionFound(hitResults, count, Vector2.down)) {
-            withinJumpBuffer = true;
+        if (CompatibleCollisionFound(hitResults, count, Vector2.down)
+            || withinJumpFrameBuffer()) {
+            canRequestJump = true;
         }
     }
 
     // Pull object downards. Creates illusion of downwards acceleration
-    protected void SimulateGravity() {
-        // Increase gravityCounteract if user recently went to not grounded state
-        if (grounded[1] && !grounded[0] && !isJumping) { 
+    // Handle requests to jump, as well as cases such as falling off ledges
+    protected void SimulateGravity() { 
+
+        // Part 1: Process how much counteract to add to gravityCounteract based on the current state (4)
+        // Object has left grounded state via falling off a ledge (not in jump state)
+        if (grounded[1] && !grounded[0] && !isJumping && !requestedJump) { 
             gravityCounteract += gravity; 
         }
 
-        // If user is grounded and has previously requested a jump within their jumpBuffer, increase gravity counteract
-        if (grounded[0] && requestedJump) {
+        // Object has requested to jump and is currently in a grounded state
+        else if (grounded[0] && requestedJump && !isJumping) {
             gravityCounteract = jumpCounteract;
             isJumping = true;
             requestedJump = false;
         }
 
+        // Object has recently left grounded state by falling off ledge and has requested to jump
+        else if (requestedJump && withinJumpFrameBuffer()) {
+            gravityCounteract = jumpCounteract;
+            isJumping = true;
+            requestedJump = false;
+        }
+
+        // Part 2: Process gravity's affect on the object this frame based on gravityCounteract
         // Decay gravityCounteract each frame
         gravityCounteract -= decay;
         if (gravityCounteract < 0) { gravityCounteract = 0; }
@@ -92,6 +107,22 @@ public class PhysicsObject : MonoBehaviour
         // If gravityCounteract is greater than gravityCounteract, move downwards
         // Otherwise move upwards
         Move(Mathf.Sign(-gravity + gravityCounteract) * Vector2.up, Mathf.Abs(-gravity + gravityCounteract) * Time.deltaTime);
+    }
+
+    // Returns true when a user has recently when from grounded to not grounded state
+    // Returns false if user is currently jumping, or too many frames have passed
+    // Frames to determine whether it returns true in int jumpFrameBuffer
+    private bool withinJumpFrameBuffer() {
+        if (isJumping) {
+            return false;
+        }
+
+        for (int i = 1; i < jumpFrameBuffer; i++) { // (5)
+            if (grounded[i] == true) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -203,4 +234,21 @@ public class PhysicsObject : MonoBehaviour
  * it should be OK to not fix for now, unless another bug comes from it. 
  * Also, if the player happens to click jump while in the jump buffer of a platform, then goes past it by going right and landing on another platform below it,
  * this will also cause the player to jump.
+ */
+
+/* (4) How jumping works
+ * An object can request a jump if any of these 3 conditions hold
+ * 1. The object is grounded this frame
+ * 2. The object is within the jumpBuffer of the platform this frame, but not grounded
+ * 3. The object is not grounded nor within the jumpBuffer of any platform, but has recently walked off a ledge exactly jumpFrameBuffer frames ago NOT by jumping
+ * If these conditions hold and an object requests a jump, we must process the request very carefully
+ * If case 1 or case 2, we counteract gravity once the object is grounded (may not be right away)
+ * If case 3, we must immediately process the request and counteract gravity even though the object is not grounded
+ */ 
+
+/* (5) Potential exploit with jumpBufferFrame
+ * If the user has a very low framerate, Time.deltaTime will equalize it to make the game run at the same pace
+ * But this function will work the exact same way, which means theoretically, a player could run off a ledge, go a huge distance if they have low framerate 
+ * (within 5 frames they may go a significantly large distance) and then they could exploit this mechanic to jump alot further then they should be able to
+ * This is why jumpBufferFrame should always be kept very low, but we should come up with a way to fix this eventually. 
  */
