@@ -8,7 +8,7 @@ One of the goals I had when I started this project was to fully create the physi
 
 **Intended features:**
 - Simple platformer physics, including a gravity system and collision detection - ***Completed!***
-- Intuitive and smooth player controls - ***Completed!***
+- Smooth and responsive player controls - ***Completed!***
 - PS4 controller support
 - Simple grid based UI system to support easy level design
 - Level screen progression, and goalposts to finish levels
