@@ -27,7 +27,8 @@ public class PhysicsObject : MonoBehaviour
     protected int jumpFrameBuffer = 3; // Max amount of frames from when object falls off a ledge such canJump is true
                                        // Must be at most the same size as the grounded array
     protected bool isJumping;
-
+    protected bool isMovingUp;
+    protected bool isMovingDown;
 
     protected Rigidbody2D rb2d;
     protected ContactFilter2D contactFilter;
@@ -47,6 +48,7 @@ public class PhysicsObject : MonoBehaviour
 
     protected virtual void Update() {
         UpdateGroundedHistory();
+        ProcessJumpRequests();
         SimulateGravity();
 
     }
@@ -54,11 +56,12 @@ public class PhysicsObject : MonoBehaviour
     // Update grounded history, including current frame's grounded
     // Should be done at the beginning of every frame
     protected void UpdateGroundedHistory() {
+        // Update past grounded values
         for (int i = grounded.Length-1; i > 0; i--) {
             grounded[i] = grounded[i - 1];
         }
 
-        // Determine if user collides with ground
+        // Update current grounded value
         grounded[0] = false; 
         int count = rb2d.Cast(Vector2.down, contactFilter, hitResults, buffer);
         if (CompatibleCollisionFound(hitResults, count, Vector2.down)) {
@@ -66,13 +69,17 @@ public class PhysicsObject : MonoBehaviour
             isJumping = false; // Grounded -> user is not jumping
         }
 
-        // Determine if user can jump this frame (4)
+        // Update whether player can request jump this frame (4)
         canRequestJump = false;
         count = rb2d.Cast(Vector2.down, contactFilter, hitResults, buffer + jumpBuffer);
         if (CompatibleCollisionFound(hitResults, count, Vector2.down)
             || withinJumpFrameBuffer()) {
             canRequestJump = true;
         }
+    }
+
+    protected virtual void ProcessJumpRequests() {
+        requestedJump = false;
     }
 
     // Pull object downards. Creates illusion of downwards acceleration
@@ -82,7 +89,7 @@ public class PhysicsObject : MonoBehaviour
         // Part 1: Process how much counteract to add to gravityCounteract based on the current state (4)
         // Object has left grounded state via falling off a ledge (not in jump state)
         if (grounded[1] && !grounded[0] && !isJumping && !requestedJump) { 
-            gravityCounteract += gravity; 
+            gravityCounteract = gravity; 
         }
 
         // Object has requested to jump and is currently in a grounded state
@@ -104,9 +111,22 @@ public class PhysicsObject : MonoBehaviour
         gravityCounteract -= decay;
         if (gravityCounteract < 0) { gravityCounteract = 0; }
 
-        // If gravityCounteract is greater than gravityCounteract, move downwards
-        // Otherwise move upwards
+        // Move the object, and properly reflect the direction of movement for the object
         Move(Mathf.Sign(-gravity + gravityCounteract) * Vector2.up, Mathf.Abs(-gravity + gravityCounteract) * Time.deltaTime);
+
+        // Compute booleans on current motion of object
+        if (gravityCounteract > gravity) { 
+            isMovingUp = true;
+            isMovingDown = false;
+        }
+        else if (gravityCounteract < gravity && !grounded[0]) {
+            isMovingUp = false;
+            isMovingDown = true;
+        }
+        else {
+            isMovingUp = false;
+            isMovingDown = false;
+        }
     }
 
     // Returns true when a user has recently when from grounded to not grounded state

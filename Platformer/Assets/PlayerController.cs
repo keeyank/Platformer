@@ -11,17 +11,17 @@ public class PlayerController : PhysicsObject
 
     protected override void Update()
     {
-        UpdateGroundedHistory();
+        base.Update();
 
-        // Player requests a jump
-        if (canRequestJump && Input.GetKeyDown(KeyCode.Space)) {
-            if (canRequestJump && !requestedJump) {
-                requestedJump = true;
+        // Reduce gravityCounteract for next frame once player lets go of jump button
+        if (Input.GetKeyUp(KeyCode.Space) && isMovingUp) {
+            gravityCounteract -= 5f;
+            if (gravityCounteract < gravity) {
+                gravityCounteract = gravity;
             }
         }
 
-        SimulateGravity();
-
+        // Movement with acceleration
         if (Input.GetKey(KeyCode.D)) {
             currentSpeed += acceleration;
             if (currentSpeed > maxSpeed) { currentSpeed = maxSpeed; }
@@ -34,6 +34,7 @@ public class PlayerController : PhysicsObject
             Move(Vector3.left, currentSpeed * Time.deltaTime);
         }
 
+        // Reset acceleration when player lets go of keys
         if (Input.GetKeyUp(KeyCode.A) || Input.GetKeyUp(KeyCode.D)) {
             currentSpeed = minSpeed;
         }
@@ -41,6 +42,15 @@ public class PlayerController : PhysicsObject
         // DEBUG
         if (Input.GetKey(KeyCode.LeftShift)) {
             rb2d.position = new Vector2(1, 1);
+        }
+    }
+
+    protected override void ProcessJumpRequests() {
+        // Player requests a jump when jump button pressed
+        if (canRequestJump && Input.GetKeyDown(KeyCode.Space)) {
+            if (canRequestJump && !requestedJump) {
+                requestedJump = true;
+            }
         }
     }
 }
