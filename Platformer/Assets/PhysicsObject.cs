@@ -21,29 +21,25 @@ public class PhysicsObject : MonoBehaviour {
     private const float buffer = 0.01f; // Used to fix weird bug with collision detection
                                         // Player ends up slightly floating above platforms (corrected via platform hitboxes)
 
-    protected const float jumpCounteract = 25f; // TODO: should be different for each instance of a physics body so use a constructur to fix this
+    protected const float jumpCounteract = 26.5f; // TODO: should be different for each instance of a physics body so use a constructur to fix this
     private bool requestedJump;
     private float timeWhenJumpRequested;
     private const float timeAllowableToSatisfyJumpRequest = 0.1f; // Allowable seconds passed before jumpRequest denied and reset to false if player not grounded
 
     protected float wallJumpSpeed;
-    protected const float wallJumpSpeedMax = 12.5f;
-    protected const float wallJumpDecay = 1.0f;
-    protected const float wallJumpCounteract = 22.5f;
+    protected const float wallJumpSpeedMax = 11.5f;
+    protected const float wallJumpDecay = 0.8f;
+    protected const float wallJumpCounteract = 24f;
     protected const float wallJumpBuffer = 0.085f; // Allow some leeway for huggingLeftWall and huggingRightWall to be set to true
     protected bool huggingLeftWall;
     protected bool huggingRightWall;
-    protected bool requestedRightWallJump;
-    protected bool requestedLeftWallJump;
-
 
     // grounded[0] represents grounded state at current frame, grounded[1] represents grounded state 1 frame ago, 
     // Key assertion: If the object is in grounded[0] state, object is not in isJumping state
-    protected bool[] grounded = new bool[10];
+    protected bool[] grounded = new bool[2];
     private float timeWhenFellOffLedge;
-    private const float timeNetLedgeFall = 0.15f; // Allowable
-    protected int jumpFrameBuffer = 3; // Max amount of frames from when object falls off a ledge such canJump is true
-                                       // Must be at most the same size as the grounded array
+    private const float timeNetLedgeFall = 0.15f; // Allowable time for player to jump after falling off a ledge
+
     protected bool isJumping;
     protected bool isMovingUp;
     protected bool isMovingDown;
@@ -109,8 +105,6 @@ public class PhysicsObject : MonoBehaviour {
     // Override to determine when jumps are requested for physics object
     protected virtual void ProcessJumpRequests() {
         requestedJump = false;
-        requestedRightWallJump = false;
-        requestedLeftWallJump = false;
     }
 
     // Pull object downards. Creates illusion of downwards acceleration
@@ -129,41 +123,45 @@ public class PhysicsObject : MonoBehaviour {
     private void CalculateMovement() {
 
         // Set requestedJump to false if the time since the last jump that was requested has expired
+        // If the jump is satisfied this frame, this will never reset requestedJump
         if ((Time.realtimeSinceStartup - timeWhenJumpRequested) > timeAllowableToSatisfyJumpRequest) {
             requestedJump = false;
         }
 
         /* 1. Process Jump Requests based on objects current position (4)*/
-        
-        // Object has requested to jump and is currently in a grounded state
-        // This case has priority over wall jumping (both cases can be true at same time)
-        if (grounded[0] && requestedJump && !isJumping) {
-            gravityCounteract = jumpCounteract;
-            isJumping = true;
-            ResetJumpRequests();
+        // If any 
+        if (requestedJump) {
+            // Object has requested to jump and is currently in a grounded state
+            // This case has priority over wall jumping (both cases can be true at same time)
+            if (grounded[0] && !isJumping) {
+                gravityCounteract = jumpCounteract;
+                isJumping = true;
+                requestedJump = false;
+            }
+
+            // Object has recently left grounded state by falling off ledge and has requested to jump
+            // Has priority over wall jumping (can be true while the condition for wall jumping is true)
+            else if (!isJumping && !grounded[0] &&
+                (Time.realtimeSinceStartup - timeWhenFellOffLedge) < timeNetLedgeFall) {
+                gravityCounteract = jumpCounteract;
+                isJumping = true;
+                requestedJump = false;
+            }
+
+            // Object has requested to jump while next to a wall
+            else if (huggingRightWall || huggingLeftWall) {
+                if (huggingLeftWall) {
+                    wallJumpSpeed = wallJumpSpeedMax;
+                }
+                if (huggingRightWall) {
+                    wallJumpSpeed = -wallJumpSpeedMax;
+                }
+                gravityCounteract = wallJumpCounteract;
+                isJumping = true;
+                requestedJump = false;
+            }
         }
 
-        // Object has recently left grounded state by falling off ledge and has requested to jump
-        // Has priority over wall jumping (can be true while the condition for wall jumping is true)
-        else if (requestedJump && !isJumping && !grounded[0] &&
-            (Time.realtimeSinceStartup - timeWhenFellOffLedge) < timeNetLedgeFall) {
-            gravityCounteract = jumpCounteract;
-            isJumping = true;
-            ResetJumpRequests();
-        }
-
-        // Object has requested to wall jump
-        else if (requestedRightWallJump || requestedLeftWallJump) {
-            if (requestedRightWallJump) {
-                wallJumpSpeed = wallJumpSpeedMax;
-            }
-            if (requestedLeftWallJump) {
-                wallJumpSpeed = -wallJumpSpeedMax;
-            }
-            gravityCounteract = wallJumpCounteract;
-            isJumping = true;
-            ResetJumpRequests();
-        }
 
         // Object has left grounded state via falling off a ledge (not in jump state)
         if (grounded[1] && !grounded[0] && !isJumping) {
@@ -187,12 +185,6 @@ public class PhysicsObject : MonoBehaviour {
         }
     }
 
-    private void ResetJumpRequests() {
-        requestedJump = false;
-        requestedLeftWallJump = false;
-        requestedRightWallJump = false;
-    }
-
     // Compute booleans on current motion of object this frame
     private void UpdateMotionBools() {
         if (gravityCounteract > gravity) {
@@ -208,23 +200,6 @@ public class PhysicsObject : MonoBehaviour {
             isMovingDown = false;
         }
     }
-
-    // Returns true when a user has recently when from grounded to not grounded state
-    // Returns false if user is currently jumping, or too many frames have passed
-    // Frames to determine whether it returns true in int jumpFrameBuffer
-    private bool withinJumpFrameBuffer() {
-        if (isJumping) {
-            return false;
-        }
-
-        for (int i = 1; i < jumpFrameBuffer; i++) { // (5)
-            if (grounded[i] == true) {
-                return true;
-            }
-        }
-        return false;
-    }
-
 
     // Move object speed units towards direction
     // If there is a collidable in the way, object will not intersect it
@@ -281,6 +256,7 @@ public class PhysicsObject : MonoBehaviour {
                     }
                 }
                 newPos = new Vector2(maxPointX + extents.x + buffer, newPos.y);
+                if (wallJumpSpeed < 0) { wallJumpSpeed = 0; }
             }
 
             else if (direction == Vector2.right) {
@@ -293,6 +269,7 @@ public class PhysicsObject : MonoBehaviour {
                     }
                 }
                 newPos = new Vector2(minPointX - extents.x - buffer, newPos.y);
+                if (wallJumpSpeed > 0) { wallJumpSpeed = 0; }
             }
         }
 
@@ -337,9 +314,6 @@ public class PhysicsObject : MonoBehaviour {
  * If the player is grounded, the request will be fulfilled right away, otherwise it will be fulfilled as soon as the player lands if it's within the timer
  * The timer resets everytime the player hits space
  * The player may also jump if he is hugging a wall, which will occur if neither of the first 2 conditions are satisfied and the third is
- * After a successful jump occurs, all other jump requests are reset to false
- * 
- * Key Point: If any form of a jump occurs, all jump requests must be immediately reset (the player's jump input has been used up so we don't want it to be used 
- * again at any point). 
+ * After a successful jump occurs, the jump request is set to false
  */
 
