@@ -25,25 +25,48 @@ public class PlayerController : PhysicsObject
 
         // Movement with acceleration
         if (Input.GetKey(KeyCode.D)) {
-            // If user is hugging a wall, reduce acceleration to give more time for wall jump
+            // If user is hugging a wall, set speed low to give more time for wall jump
             if (huggingLeftWall && !grounded[0]) {
                 currentSpeed = wallMinSpeed;
             }
 
+            // Accelerate
             currentSpeed += acceleration;
             if (currentSpeed > maxSpeed) { currentSpeed = maxSpeed; }
-            Move(Vector3.right, currentSpeed * Time.deltaTime);
+
+
+            // Equalize movement with respect to wallJump Speed
+            if (wallJumpSpeed > 0 && currentSpeed > Mathf.Abs(wallJumpSpeed)) {
+                Move(Vector3.right, (currentSpeed - wallJumpSpeed) * Time.deltaTime);
+            }
+            else if (wallJumpSpeed > 0 && currentSpeed <= Mathf.Abs(wallJumpSpeed)) {
+                // Do nothing
+            }
+            else { // wallJumpSpeed <= 0
+                Move(Vector3.right, currentSpeed * Time.deltaTime);
+            }
         }
 
         if (Input.GetKey(KeyCode.A)) {
-
+            // Lower speed when hugging wall for more accurate wall jumps
             if (huggingRightWall && !grounded[0]) {
                 currentSpeed = wallMinSpeed;
             }
 
+            // Accelerate
             currentSpeed += acceleration;
             if (currentSpeed > maxSpeed) { currentSpeed = maxSpeed; }
-            Move(Vector3.left, currentSpeed * Time.deltaTime);
+
+            // Equalize movement wrt wall jump speed
+            if (wallJumpSpeed < 0 && currentSpeed > Mathf.Abs(wallJumpSpeed)) {
+                Move(Vector3.left, (currentSpeed - wallJumpSpeed) * Time.deltaTime);
+            }
+            else if (wallJumpSpeed < 0 && currentSpeed <= Mathf.Abs(wallJumpSpeed)){
+                // Do nothing
+            }
+            else { // wallJumpSpeed >= 0
+                Move(Vector3.left, currentSpeed * Time.deltaTime);
+            }
         }
 
         // Reset acceleration when player lets go of keys

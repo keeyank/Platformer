@@ -4,15 +4,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 
-//TODO: Move the code that sets gravityCounteract = 0 up to where grounded is being computed. I think that maeks more sense, but make sure it totally works
-// both logically and via testing before you commit to it, since this won't fix any current bugs and the games working fine at this state.
-// Also do the same thing with when gravityCounteract is set to gravity for upwards collisions
-//TODO: Refactor how jumping works, I think it's kinda weird. It's weird how the cases take into account a case where the jump was requested at a previous frame,
-// and a case where the jump was requested right away. Maybe it's ok I dunno, I can't think of a better way to refactor it right now but my brain is totally
-// fried so whatever if you can htink of something better go for it but it's probly ok honestly, it seems to be working perfectly from testing.
-//TODO: Refactor the wall Jumping code if you think it can be better, modify wall jump so that you can't move the direction of the wall jump if you're
-// currently doing a wall jump (you can do this with math, doing stuff with checking wallJumpSpeed and currentSpeed, like only allowing to player to go
-// wallJumpSpeed - playerSpeed in that direction or something like that. Or maybe some if statements that check if wallJumpSpeed is greater than a certain value)
 public class PhysicsObject : MonoBehaviour {
     protected const float gravity = 11f;
     protected float gravityCounteract;
@@ -20,8 +11,7 @@ public class PhysicsObject : MonoBehaviour {
 
     private const float buffer = 0.01f; // Used to fix weird bug with collision detection
                                         // Player ends up slightly floating above platforms (corrected via platform hitboxes)
-
-    protected const float jumpCounteract = 26.5f; // TODO: should be different for each instance of a physics body so use a constructur to fix this
+    protected const float jumpCounteract = 26.5f; 
     private bool requestedJump;
     private float timeWhenJumpRequested;
     private const float timeAllowableToSatisfyJumpRequest = 0.065f; // Allowable seconds passed before jumpRequest denied and reset to false if player not grounded
@@ -30,7 +20,7 @@ public class PhysicsObject : MonoBehaviour {
     protected const float wallJumpSpeedMax = 11.5f;
     protected const float wallJumpDecay = 0.8f;
     protected const float wallJumpCounteract = 24f;
-    protected const float wallJumpBuffer = 0.085f; // Allow some leeway for huggingLeftWall and huggingRightWall to be set to true
+    protected const float wallJumpBuffer = 0.1f; // Allow some leeway for huggingLeftWall and huggingRightWall to be set to true
     protected bool huggingLeftWall;
     protected bool huggingRightWall;
 
@@ -229,7 +219,7 @@ public class PhysicsObject : MonoBehaviour {
                 // Update newPos so that it isn't intersecting the other box collider
                 // Add a buffer - Makes user slightly float above tiles, but prevents unwanted collisions - Hitboxes made smaller to counteract this
                 newPos = new Vector2(newPos.x, maxPointY + extents.y + buffer);
-                gravityCounteract = 0; // (2)
+                gravityCounteract = 0; 
 
             }
 
@@ -244,7 +234,7 @@ public class PhysicsObject : MonoBehaviour {
                 }
 
                 newPos = new Vector2(newPos.x, minPointY - extents.y - buffer);
-                gravityCounteract = gravity; // (2)
+                gravityCounteract = gravity; 
             }
 
             else if (direction == Vector2.left) {
@@ -296,17 +286,6 @@ public class PhysicsObject : MonoBehaviour {
         requestedJump = true;
     }
 }
-
-/* (1) 
- * grounded is set to false here, which may seem like there is a point in time where grounded is false when it should be true (which will be computed later)
- * But it works because we override fixed update in the player controller, and the grounded bool will be already calculated correctly by then since gravity
- * is the very first thing that uses the moveBody function. This must be always the case - MoveBody must be used only in FixedUpdate and AFTER gravity is computed
- */
-
-/* (2)
- * Gravitycounteract should be reset whenever a player is grounded
- * We also set gravityCounteract to gravity whenever the an object collides with something above it, so the object can smoothly fall back down
- */
 
 /* (4) How jumping works
  * An object can request a jump at any point in time
