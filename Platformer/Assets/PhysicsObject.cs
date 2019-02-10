@@ -24,7 +24,7 @@ public class PhysicsObject : MonoBehaviour {
     protected const float jumpCounteract = 26.5f; // TODO: should be different for each instance of a physics body so use a constructur to fix this
     private bool requestedJump;
     private float timeWhenJumpRequested;
-    private const float timeAllowableToSatisfyJumpRequest = 0.1f; // Allowable seconds passed before jumpRequest denied and reset to false if player not grounded
+    private const float timeAllowableToSatisfyJumpRequest = 0.065f; // Allowable seconds passed before jumpRequest denied and reset to false if player not grounded
 
     protected float wallJumpSpeed;
     protected const float wallJumpSpeedMax = 11.5f;
@@ -139,16 +139,8 @@ public class PhysicsObject : MonoBehaviour {
                 requestedJump = false;
             }
 
-            // Object has recently left grounded state by falling off ledge and has requested to jump
-            // Has priority over wall jumping (can be true while the condition for wall jumping is true)
-            else if (!isJumping && !grounded[0] &&
-                (Time.realtimeSinceStartup - timeWhenFellOffLedge) < timeNetLedgeFall) {
-                gravityCounteract = jumpCounteract;
-                isJumping = true;
-                requestedJump = false;
-            }
-
             // Object has requested to jump while next to a wall
+            // Has priority over falling off ledge jumping
             else if (huggingRightWall || huggingLeftWall) {
                 if (huggingLeftWall) {
                     wallJumpSpeed = wallJumpSpeedMax;
@@ -157,6 +149,15 @@ public class PhysicsObject : MonoBehaviour {
                     wallJumpSpeed = -wallJumpSpeedMax;
                 }
                 gravityCounteract = wallJumpCounteract;
+                isJumping = true;
+                requestedJump = false;
+            }
+
+            // Object has recently left grounded state by falling off ledge and has requested to jump
+            // Least priority form of jumping
+            else if (!isJumping && !grounded[0] &&
+                (Time.realtimeSinceStartup - timeWhenFellOffLedge) < timeNetLedgeFall) {
+                gravityCounteract = jumpCounteract;
                 isJumping = true;
                 requestedJump = false;
             }

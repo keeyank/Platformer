@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 public class PlayerController : PhysicsObject
 {
@@ -8,6 +9,7 @@ public class PlayerController : PhysicsObject
     private const float maxSpeed = 6f;
     private const float minSpeed = 2f;
     private const float acceleration = 0.5f;
+    private const float wallMinSpeed = 1.4f;
 
     protected override void Update()
     {
@@ -23,12 +25,22 @@ public class PlayerController : PhysicsObject
 
         // Movement with acceleration
         if (Input.GetKey(KeyCode.D)) {
+            // If user is hugging a wall, reduce acceleration to give more time for wall jump
+            if (huggingLeftWall && !grounded[0]) {
+                currentSpeed = wallMinSpeed;
+            }
+
             currentSpeed += acceleration;
             if (currentSpeed > maxSpeed) { currentSpeed = maxSpeed; }
             Move(Vector3.right, currentSpeed * Time.deltaTime);
         }
 
         if (Input.GetKey(KeyCode.A)) {
+
+            if (huggingRightWall && !grounded[0]) {
+                currentSpeed = wallMinSpeed;
+            }
+
             currentSpeed += acceleration;
             if (currentSpeed > maxSpeed) { currentSpeed = maxSpeed; }
             Move(Vector3.left, currentSpeed * Time.deltaTime);
@@ -44,23 +56,6 @@ public class PlayerController : PhysicsObject
             rb2d.position = new Vector2(1, 1);
         }
     }
-
-    //protected override void ProcessJumpRequests() {
-    //    // Player requests a jump when jump button pressed
-    //    // jumpRequest is satisfied as soon as player lands within timer
-    //    // wall jump requests satisfied immediately in SimulatePhysics function
-    //    if (Input.GetKeyDown(KeyCode.Space)) {
-    //        requestJump();
-    //    }
-
-    //    if (huggingRightWall && Input.GetKeyDown(KeyCode.Space)) {
-    //        requestedLeftWallJump = true;
-    //    }
-
-    //    if (huggingLeftWall && Input.GetKeyDown(KeyCode.Space)) {
-    //        requestedRightWallJump = true;
-    //    }
-    //}
 
     protected override void ProcessJumpRequests() {
         // Player requests a jump when jump button pressed
