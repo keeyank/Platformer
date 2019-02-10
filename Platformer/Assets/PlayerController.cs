@@ -47,17 +47,17 @@ public class PlayerController : PhysicsObject
 
     protected override void ProcessJumpRequests() {
         // Player requests a jump when jump button pressed
-        if (canRequestJump && Input.GetKeyDown(KeyCode.Space)) {
-            if (!requestedJump) {
-                requestedJump = true;
-            }
+        // jumpRequest is satisfied as soon as player lands within timer
+        // wall jump requests satisfied immediately in SimulatePhysics function
+        if (Input.GetKeyDown(KeyCode.Space)) {
+            requestJump();
         }
 
-        if (canRequestLeftWallJump && Input.GetKeyDown(KeyCode.Space)) {
+        if (huggingRightWall && Input.GetKeyDown(KeyCode.Space)) {
             requestedLeftWallJump = true;
         }
 
-        if (canRequestRightWallJump && Input.GetKeyDown(KeyCode.Space)) {
+        if (huggingLeftWall && Input.GetKeyDown(KeyCode.Space)) {
             requestedRightWallJump = true;
         }
     }

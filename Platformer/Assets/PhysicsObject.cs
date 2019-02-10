@@ -1,35 +1,38 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 //TODO: Move the code that sets gravityCounteract = 0 up to where grounded is being computed. I think that maeks more sense, but make sure it totally works
 // both logically and via testing before you commit to it, since this won't fix any current bugs and the games working fine at this state.
 // Also do the same thing with when gravityCounteract is set to gravity for upwards collisions
-//TODO: (5)
+//TODO: Refactor how jumping works, I think it's kinda weird. It's weird how the cases take into account a case where the jump was requested at a previous frame,
+// and a case where the jump was requested right away. Maybe it's ok I dunno, I can't think of a better way to refactor it right now but my brain is totally
+// fried so whatever if you can htink of something better go for it but it's probly ok honestly, it seems to be working perfectly from testing.
 //TODO: Refactor the wall Jumping code if you think it can be better, modify wall jump so that you can't move the direction of the wall jump if you're
 // currently doing a wall jump (you can do this with math, doing stuff with checking wallJumpSpeed and currentSpeed, like only allowing to player to go
 // wallJumpSpeed - playerSpeed in that direction or something like that. Or maybe some if statements that check if wallJumpSpeed is greater than a certain value)
-public class PhysicsObject : MonoBehaviour
-{
-    protected const float gravity = 10f;
+public class PhysicsObject : MonoBehaviour {
+    protected const float gravity = 11f;
     protected float gravityCounteract;
     private const float decay = 0.75f;
 
-    private float buffer = 0.01f; // Used to fix weird bug with collision detection
-                                  // Player ends up slightly floating above platforms (corrected via platform hitboxes)
+    private const float buffer = 0.01f; // Used to fix weird bug with collision detection
+                                        // Player ends up slightly floating above platforms (corrected via platform hitboxes)
 
-    protected float jumpCounteract = 25f; // TODO: should be different for each instance of a physics body so use a constructur to fix this
-    protected float jumpBuffer = 0.2f; // (3)
-    protected float wallJumpBuffer = 0.05f;
-    protected bool canRequestJump;
-    protected bool requestedJump;
+    protected const float jumpCounteract = 25f; // TODO: should be different for each instance of a physics body so use a constructur to fix this
+    private bool requestedJump;
+    private float timeWhenJumpRequested;
+    private const float timeAllowableToSatisfyJumpRequest = 0.1f; // Allowable seconds passed before jumpRequest denied and reset to false if player not grounded
 
     protected float wallJumpSpeed;
-    protected float wallJumpSpeedMax = 12.5f;
-    protected float wallJumpDecay = 1.0f;
-    protected float wallJumpCounteract = 22.5f;
-    protected bool canRequestRightWallJump;
-    protected bool canRequestLeftWallJump;
+    protected const float wallJumpSpeedMax = 12.5f;
+    protected const float wallJumpDecay = 1.0f;
+    protected const float wallJumpCounteract = 22.5f;
+    protected const float wallJumpBuffer = 0.085f; // Allow some leeway for huggingLeftWall and huggingRightWall to be set to true
+    protected bool huggingLeftWall;
+    protected bool huggingRightWall;
     protected bool requestedRightWallJump;
     protected bool requestedLeftWallJump;
 
@@ -37,6 +40,8 @@ public class PhysicsObject : MonoBehaviour
     // grounded[0] represents grounded state at current frame, grounded[1] represents grounded state 1 frame ago, 
     // Key assertion: If the object is in grounded[0] state, object is not in isJumping state
     protected bool[] grounded = new bool[10];
+    private float timeWhenFellOffLedge;
+    private const float timeNetLedgeFall = 0.15f; // Allowable
     protected int jumpFrameBuffer = 3; // Max amount of frames from when object falls off a ledge such canJump is true
                                        // Must be at most the same size as the grounded array
     protected bool isJumping;
@@ -63,7 +68,7 @@ public class PhysicsObject : MonoBehaviour
         UpdateGroundedHistory();
         UpdateCanRequestJumps();
         ProcessJumpRequests();
-        SimulateGravity();
+        SimulatePhysics();
 
     }
 
@@ -86,31 +91,22 @@ public class PhysicsObject : MonoBehaviour
 
     // Updates all the canRequestJumps booleans for this frame
     protected void UpdateCanRequestJumps() {
-        // Update whether player can request jump this frame (4)
-        canRequestJump = false;
-        int count = rb2d.Cast(Vector2.down, contactFilter, hitResults, buffer + jumpBuffer);
-        if (CompatibleCollisionFound(hitResults, count, Vector2.down)
-            || withinJumpFrameBuffer()) {
-            canRequestJump = true;
-        }
 
-        canRequestRightWallJump = false;
+        huggingLeftWall = false;
         gameObject.GetComponent<SpriteRenderer>().color = Color.white;
-        count = rb2d.Cast(Vector2.left, contactFilter, hitResults, buffer + wallJumpBuffer);
+        int count = rb2d.Cast(Vector2.left, contactFilter, hitResults, buffer + wallJumpBuffer);
         if (CompatibleCollisionFound(hitResults, count, Vector2.left)) {
-            canRequestRightWallJump = true;
-            gameObject.GetComponent<SpriteRenderer>().color = Color.red;
+            huggingLeftWall = true;
         }
-        canRequestLeftWallJump = false;
+        huggingRightWall = false;
         count = rb2d.Cast(Vector2.right, contactFilter, hitResults, buffer + wallJumpBuffer);
         if (CompatibleCollisionFound(hitResults, count, Vector2.right)) {
-            canRequestLeftWallJump = true;
-            gameObject.GetComponent<SpriteRenderer>().color = Color.blue;
+            huggingRightWall = true;
         }
 
     }
 
-
+    // Override to determine when jumps are requested for physics object
     protected virtual void ProcessJumpRequests() {
         requestedJump = false;
         requestedRightWallJump = false;
@@ -119,20 +115,41 @@ public class PhysicsObject : MonoBehaviour
 
     // Pull object downards. Creates illusion of downwards acceleration
     // Handle requests to jump, as well as cases such as falling off ledges
-    protected void SimulateGravity()
-    {
+    protected void SimulatePhysics() {
+        CalculateMovement();
 
-        // Part 1: Process how much counteract to add to gravityCounteract based on the current state (4)
+        // Move the object, and properly reflect the direction of movement for the object
+        Move(Mathf.Sign(-gravity + gravityCounteract) * Vector2.up, Mathf.Abs(-gravity + gravityCounteract) * Time.deltaTime);
+        Move(Mathf.Sign(wallJumpSpeed) * Vector2.right, Mathf.Abs(wallJumpSpeed) * Time.deltaTime);
 
+        UpdateMotionBools();
+    }
+
+    // Calculate movement speed based on Jump requests (4)
+    private void CalculateMovement() {
+
+        // Set requestedJump to false if the time since the last jump that was requested has expired
+        if ((Time.realtimeSinceStartup - timeWhenJumpRequested) > timeAllowableToSatisfyJumpRequest) {
+            requestedJump = false;
+        }
+
+        /* 1. Process Jump Requests based on objects current position (4)*/
+        
         // Object has requested to jump and is currently in a grounded state
+        // This case has priority over wall jumping (both cases can be true at same time)
         if (grounded[0] && requestedJump && !isJumping) {
             gravityCounteract = jumpCounteract;
             isJumping = true;
-            requestedJump = false;
+            ResetJumpRequests();
+        }
 
-            // Reset requestedWallJump (it will still be true if player jumped right next to a wall while grounded)
-            requestedLeftWallJump = false;
-            requestedRightWallJump = false;
+        // Object has recently left grounded state by falling off ledge and has requested to jump
+        // Has priority over wall jumping (can be true while the condition for wall jumping is true)
+        else if (requestedJump && !isJumping && !grounded[0] &&
+            (Time.realtimeSinceStartup - timeWhenFellOffLedge) < timeNetLedgeFall) {
+            gravityCounteract = jumpCounteract;
+            isJumping = true;
+            ResetJumpRequests();
         }
 
         // Object has requested to wall jump
@@ -144,22 +161,17 @@ public class PhysicsObject : MonoBehaviour
                 wallJumpSpeed = -wallJumpSpeedMax;
             }
             gravityCounteract = wallJumpCounteract;
-            requestedLeftWallJump = false; requestedRightWallJump = false;
+            isJumping = true;
+            ResetJumpRequests();
         }
 
         // Object has left grounded state via falling off a ledge (not in jump state)
-        else if (grounded[1] && !grounded[0] && !isJumping && !requestedJump) { 
-            gravityCounteract = gravity; 
+        if (grounded[1] && !grounded[0] && !isJumping) {
+            gravityCounteract = gravity;
+            timeWhenFellOffLedge = Time.realtimeSinceStartup;
         }
 
-        // Object has recently left grounded state by falling off ledge and has requested to jump
-        else if (requestedJump && withinJumpFrameBuffer()) {
-            gravityCounteract = jumpCounteract;
-            isJumping = true;
-            requestedJump = false;
-        }
-
-        // Part 2: Process gravity's affect on the object this frame based on gravityCounteract
+        /* 2. Decay each movement to approach 0  */
         // Decay gravityCounteract each frame
         gravityCounteract -= decay;
         if (gravityCounteract < 0) { gravityCounteract = 0; }
@@ -173,14 +185,17 @@ public class PhysicsObject : MonoBehaviour
             wallJumpSpeed += wallJumpDecay;
             if (wallJumpSpeed > 0) { wallJumpSpeed = 0; }
         }
+    }
 
-        // Move the object, and properly reflect the direction of movement for the object
-        Move(Mathf.Sign(-gravity + gravityCounteract) * Vector2.up, Mathf.Abs(-gravity + gravityCounteract) * Time.deltaTime);
-        Move(Mathf.Sign(wallJumpSpeed) * Vector2.right, Mathf.Abs(wallJumpSpeed) * Time.deltaTime);
+    private void ResetJumpRequests() {
+        requestedJump = false;
+        requestedLeftWallJump = false;
+        requestedRightWallJump = false;
+    }
 
-
-        // Compute booleans on current motion of object
-        if (gravityCounteract > gravity) { 
+    // Compute booleans on current motion of object this frame
+    private void UpdateMotionBools() {
+        if (gravityCounteract > gravity) {
             isMovingUp = true;
             isMovingDown = false;
         }
@@ -188,7 +203,7 @@ public class PhysicsObject : MonoBehaviour
             isMovingUp = false;
             isMovingDown = true;
         }
-        else {
+        else { 
             isMovingUp = false;
             isMovingDown = false;
         }
@@ -296,6 +311,12 @@ public class PhysicsObject : MonoBehaviour
         }
         return false;
     }
+
+    // Request a jump and note the time that the jump is requested
+    protected void requestJump() {
+        timeWhenJumpRequested = Time.realtimeSinceStartup;
+        requestedJump = true;
+    }
 }
 
 /* (1) 
@@ -309,43 +330,16 @@ public class PhysicsObject : MonoBehaviour
  * We also set gravityCounteract to gravity whenever the an object collides with something above it, so the object can smoothly fall back down
  */
 
-/* (3) - a
- * When there is a large jump buffer, some weird stuff can happen via the input saving feature. 
- * For example, a player can click jump and immediately click jump again. It's valid since the player is within the jump buffer since the jump just began
- * However, this means that another jump has been requested, and the request will pull through much later when he actually lands.
- * A possible fix might be to have it be automatically set to false after 3 frames if it was set to true the previous 3, in order to give the players exactly
- * 3 frames of a safety net for their jumping. 
- * However, these bugs only occur when the jump buffer is very large, and it's really difficult to do something like this when the jump buffer is small, so 
- * it should be OK to not fix for now, unless another bug comes from it. 
- * Also, if the player happens to click jump while in the jump buffer of a platform, then goes past it by going right and landing on another platform below it,
- * this will also cause the player to jump.
- * 
- * (3) - b
- * Input saving also introduces another bug, when in tandem with upgraded jumping
- * If the user jumps into the buffer, presses space again and immediately releases, then goes past the platform of the jump buffer and lands on a different 
- * platform, the player will automagically do a large jump without even having their finger on the space key when the jump began, since it occurs when the
- * player lands and by then they will have released the space key originally
- * 
- * (3) - c
- * Wall jump buffer works differently than the normal jump buffer, there is no input saving on the wall jump bufer, the user can wall jump right away if he is
- * within the wall jump buffer's range and won't have to wait until he is full on the wall (this would work really weirdly since gravity doesn't pull the user 
- * to the side!)
- */
-
 /* (4) How jumping works
- * An object can request a jump if any of these 3 conditions hold
- * 1. The object is grounded this frame
- * 2. The object is within the jumpBuffer of the platform this frame, but not grounded
- * 3. The object is not grounded nor within the jumpBuffer of any platform, but has recently walked off a ledge exactly jumpFrameBuffer frames ago NOT by jumping
- * If these conditions hold and an object requests a jump, we must process the request very carefully
- * If case 1 or case 2, we counteract gravity once the object is grounded (may not be right away)
- * If case 3, we must immediately process the request and counteract gravity even though the object is not grounded
- * If a wall jump is requested, these 3 conditions won't matter and the wall jump will be executed instead
+ * An object can request a jump at any point in time
+ * The request is only fulfilled if within a certain amount of time the player is grounded, or if the player has recently left the grounded state NOT by jumping
+ * (aka by falling off something or being teleported or something)
+ * If the player is grounded, the request will be fulfilled right away, otherwise it will be fulfilled as soon as the player lands if it's within the timer
+ * The timer resets everytime the player hits space
+ * The player may also jump if he is hugging a wall, which will occur if neither of the first 2 conditions are satisfied and the third is
+ * After a successful jump occurs, all other jump requests are reset to false
+ * 
+ * Key Point: If any form of a jump occurs, all jump requests must be immediately reset (the player's jump input has been used up so we don't want it to be used 
+ * again at any point). 
  */
 
-/* (5) Potential exploit with jumpBufferFrame
- * If the user has a very low framerate, Time.deltaTime will equalize it to make the game run at the same pace
- * But this function will work the exact same way, which means theoretically, a player could run off a ledge, go a huge distance if they have low framerate 
- * (within 5 frames they may go a significantly large distance) and then they could exploit this mechanic to jump alot further then they should be able to
- * This is why jumpBufferFrame should always be kept very low, but we should come up with a way to fix this eventually. 
- */
