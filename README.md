@@ -14,6 +14,6 @@ One of the goals I had when I started this project was to fully create the physi
 - Level screen progression, and goalposts to finish levels
 
 **Optional features (if time permits):**
-- Wall jumping
+- Wall jumping - ***Completed!***
 - Enemies with simple tracking AI
 - Menu screen and level select with unlockable levels
