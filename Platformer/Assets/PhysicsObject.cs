@@ -5,21 +5,22 @@ using UnityEngine;
 using UnityEngine.Assertions;
 
 public class PhysicsObject : MonoBehaviour {
-    protected const float gravity = 11f;
+
+    [SerializeField] protected float gravity = 16f;
     protected float gravityCounteract;
-    private const float decay = 0.75f;
+    [SerializeField] private float decay = 1f;
 
     private const float buffer = 0.01f; // Used to fix weird bug with collision detection
                                         // Player ends up slightly floating above platforms (corrected via platform hitboxes)
-    protected const float jumpCounteract = 26.5f; 
+    [SerializeField] protected float jumpCounteract = 32f;
     private bool requestedJump;
     private float timeWhenJumpRequested;
     private const float timeAllowableToSatisfyJumpRequest = 0.065f; // Allowable seconds passed before jumpRequest denied and reset to false if player not grounded
 
     protected float wallJumpSpeed;
-    protected const float wallJumpSpeedMax = 11.5f;
-    protected const float wallJumpDecay = 0.8f;
-    protected const float wallJumpCounteract = 24f;
+    [SerializeField] protected float wallJumpSpeedMax = 22f;
+    [SerializeField] protected float wallJumpDecay = 1f;
+    [SerializeField] protected float wallJumpCounteract = 26.5f;
     protected const float wallJumpBuffer = 0.1f; // Allow some leeway for huggingLeftWall and huggingRightWall to be set to true
     protected bool huggingLeftWall;
     protected bool huggingRightWall;
@@ -43,7 +44,7 @@ public class PhysicsObject : MonoBehaviour {
         rb2d = GetComponent<Rigidbody2D>();
     }
 
-    void Start() {
+    protected virtual void Start() {
         // Set up contact filter to include only collidable layer objects
         //contactFilter.useTriggers = false; // Don't include triggers in results
         contactFilter.SetLayerMask(1 << 8); // Include from collidable layer only
@@ -69,7 +70,7 @@ public class PhysicsObject : MonoBehaviour {
         // Update current grounded value
         grounded[0] = false;
         int count = rb2d.Cast(Vector2.down, contactFilter, hitResults, buffer);
-        if (CompatibleCollisionFound(hitResults, count, Vector2.down)) {
+        if (CompatibleCollisionFound(hitResults, count, Vector2.down) && gravityCounteract <= 0) { // (2)
             grounded[0] = true;
             isJumping = false; // Grounded -> user is not jumping
         }
@@ -119,7 +120,7 @@ public class PhysicsObject : MonoBehaviour {
         }
 
         /* 1. Process Jump Requests based on objects current position (4)*/
-        // If any 
+
         if (requestedJump) {
             // Object has requested to jump and is currently in a grounded state
             // This case has priority over wall jumping (both cases can be true at same time)
@@ -186,7 +187,7 @@ public class PhysicsObject : MonoBehaviour {
             isMovingUp = false;
             isMovingDown = true;
         }
-        else { 
+        else {
             isMovingUp = false;
             isMovingDown = false;
         }
@@ -219,7 +220,7 @@ public class PhysicsObject : MonoBehaviour {
                 // Update newPos so that it isn't intersecting the other box collider
                 // Add a buffer - Makes user slightly float above tiles, but prevents unwanted collisions - Hitboxes made smaller to counteract this
                 newPos = new Vector2(newPos.x, maxPointY + extents.y + buffer);
-                gravityCounteract = 0; 
+                gravityCounteract = 0;
 
             }
 
@@ -234,13 +235,13 @@ public class PhysicsObject : MonoBehaviour {
                 }
 
                 newPos = new Vector2(newPos.x, minPointY - extents.y - buffer);
-                gravityCounteract = gravity; 
+                gravityCounteract = gravity;
             }
 
             else if (direction == Vector2.left) {
                 float maxPointX = float.NegativeInfinity;
                 for (int i = 0; i < count; i++) {
-                    if (hitResults[i].normal == -direction) { 
+                    if (hitResults[i].normal == -direction) {
                         if (hitResults[i].point.x > maxPointX) {
                             maxPointX = hitResults[i].point.x;
                         }
@@ -286,6 +287,9 @@ public class PhysicsObject : MonoBehaviour {
         requestedJump = true;
     }
 }
+/* (2) 
+ * This was put there to fix a bug where the player can actually be grounded while jumping upwards due to holding right next to a block with low upwards motion
+ */
 
 /* (4) How jumping works
  * An object can request a jump at any point in time

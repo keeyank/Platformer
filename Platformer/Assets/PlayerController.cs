@@ -5,19 +5,25 @@ using UnityEngine.Assertions;
 
 public class PlayerController : PhysicsObject
 {
-    private float currentSpeed = minSpeed;
-    private const float maxSpeed = 6f;
-    private const float minSpeed = 2f;
-    private const float acceleration = 0.5f;
-    private const float wallMinSpeed = 1.4f;
 
+    [SerializeField] private float maxSpeed = 13f;
+    [SerializeField] private float minSpeed = 2f;
+    [SerializeField] private float acceleration = 1f;
+    [SerializeField] private float wallMinSpeed = 1.4f;
+    [SerializeField] private float gravityCounteractReduce = 5f;
+    private float currentSpeed;
+
+    protected override void Start() {
+        base.Start();
+        currentSpeed = minSpeed;
+    }
     protected override void Update()
     {
         base.Update();
 
         // Reduce gravityCounteract for next frame once player lets go of jump button
         if (Input.GetKeyUp(KeyCode.Space) && isMovingUp) {
-            gravityCounteract -= 5f;
+            gravityCounteract -= gravityCounteractReduce;
             if (gravityCounteract < gravity) {
                 gravityCounteract = gravity;
             }
@@ -37,7 +43,7 @@ public class PlayerController : PhysicsObject
 
             // Equalize movement with respect to wallJump Speed
             if (wallJumpSpeed > 0 && currentSpeed > Mathf.Abs(wallJumpSpeed)) {
-                Move(Vector3.right, (currentSpeed - wallJumpSpeed) * Time.deltaTime);
+                Move(Vector3.right, (currentSpeed - Mathf.Abs(wallJumpSpeed)) * Time.deltaTime);
             }
             else if (wallJumpSpeed > 0 && currentSpeed <= Mathf.Abs(wallJumpSpeed)) {
                 // Do nothing
@@ -59,7 +65,7 @@ public class PlayerController : PhysicsObject
 
             // Equalize movement wrt wall jump speed
             if (wallJumpSpeed < 0 && currentSpeed > Mathf.Abs(wallJumpSpeed)) {
-                Move(Vector3.left, (currentSpeed - wallJumpSpeed) * Time.deltaTime);
+                Move(Vector3.left, (currentSpeed - Mathf.Abs(wallJumpSpeed)) * Time.deltaTime);
             }
             else if (wallJumpSpeed < 0 && currentSpeed <= Mathf.Abs(wallJumpSpeed)){
                 // Do nothing
