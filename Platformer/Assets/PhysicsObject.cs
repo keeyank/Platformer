@@ -6,21 +6,30 @@ using UnityEngine.Assertions;
 
 public class PhysicsObject : MonoBehaviour {
 
-    [SerializeField] protected float gravity = 16f;
+    protected float currentSpeed;
+
+    [SerializeField] protected float maxSpeed;
+    [SerializeField] protected float minSpeed;
+    [SerializeField] protected float acceleration;
+    [SerializeField] protected float wallMinSpeed;
+    [SerializeField] protected float gravityCounteractReduce;
+    [SerializeField] protected float wallJumpLockedInSpeed; // Assert: wallJumpLockedInSpeed <= wallJumpSpeed
+
+    [SerializeField] protected float gravity;
     protected float gravityCounteract;
-    [SerializeField] private float decay = 1f;
+    [SerializeField] private float decay;
 
     private const float buffer = 0.01f; // Used to fix weird bug with collision detection
                                         // Player ends up slightly floating above platforms (corrected via platform hitboxes)
-    [SerializeField] protected float jumpCounteract = 32f;
+    [SerializeField] protected float jumpCounteract;
     private bool requestedJump;
     private float timeWhenJumpRequested;
     private const float timeAllowableToSatisfyJumpRequest = 0.065f; // Allowable seconds passed before jumpRequest denied and reset to false if player not grounded
 
     protected float wallJumpSpeed;
-    [SerializeField] protected float wallJumpSpeedMax = 22f;
-    [SerializeField] protected float wallJumpDecay = 1f;
-    [SerializeField] protected float wallJumpCounteract = 26.5f;
+    [SerializeField] protected float wallJumpSpeedMax;
+    [SerializeField] protected float wallJumpDecay;
+    [SerializeField] protected float wallJumpCounteract;
     protected const float wallJumpBuffer = 0.1f; // Allow some leeway for huggingLeftWall and huggingRightWall to be set to true
     protected bool huggingLeftWall;
     protected bool huggingRightWall;
@@ -248,7 +257,10 @@ public class PhysicsObject : MonoBehaviour {
                     }
                 }
                 newPos = new Vector2(maxPointX + extents.x + buffer, newPos.y);
+
+                // update horizontal speeds to be minimized
                 if (wallJumpSpeed < 0) { wallJumpSpeed = 0; }
+                currentSpeed = minSpeed;
             }
 
             else if (direction == Vector2.right) {
@@ -261,7 +273,10 @@ public class PhysicsObject : MonoBehaviour {
                     }
                 }
                 newPos = new Vector2(minPointX - extents.x - buffer, newPos.y);
+
+                // Minimize horizontal speeds
                 if (wallJumpSpeed > 0) { wallJumpSpeed = 0; }
+                currentSpeed = minSpeed;
             }
         }
 
