@@ -31,8 +31,8 @@ public class PhysicsObject : MonoBehaviour {
     [SerializeField] protected float wallJumpDecay;
     [SerializeField] protected float wallJumpCounteract;
     protected const float wallJumpBuffer = 0.1f; // Allow some leeway for huggingLeftWall and huggingRightWall to be set to true
-    protected bool huggingLeftWall;
-    protected bool huggingRightWall;
+    protected bool huggingLeftWallJumpWall;
+    protected bool huggingRightWallJumpWall;
 
     // grounded[0] represents grounded state at current frame, grounded[1] represents grounded state 1 frame ago, 
     // Key assertion: If the object is in grounded[0] state, object is not in isJumping state
@@ -62,7 +62,7 @@ public class PhysicsObject : MonoBehaviour {
 
     protected virtual void Update() {
         UpdateGroundedHistory();
-        UpdateCanRequestJumps();
+        UpdateHuggingWalls();
         ProcessJumpRequests();
         SimulatePhysics();
 
@@ -85,21 +85,32 @@ public class PhysicsObject : MonoBehaviour {
         }
     }
 
-    // Updates all the canRequestJumps booleans for this frame
-    protected void UpdateCanRequestJumps() {
+    // Updates all the huggingWalls booleans for this frame
+    protected void UpdateHuggingWalls() {
 
-        huggingLeftWall = false;
+        huggingLeftWallJumpWall = false;
         gameObject.GetComponent<SpriteRenderer>().color = Color.white;
         int count = rb2d.Cast(Vector2.left, contactFilter, hitResults, buffer + wallJumpBuffer);
         if (CompatibleCollisionFound(hitResults, count, Vector2.left)) {
-            huggingLeftWall = true;
+
+            // Loop through the hits gameobjects to see if any are wall jump walls
+            for (int i = 0; i < count; i++) {
+                if (hitResults[i].collider.gameObject.tag == "WallJump") {
+                    huggingLeftWallJumpWall = true;
+                }
+            }
         }
-        huggingRightWall = false;
+        huggingRightWallJumpWall = false;
         count = rb2d.Cast(Vector2.right, contactFilter, hitResults, buffer + wallJumpBuffer);
         if (CompatibleCollisionFound(hitResults, count, Vector2.right)) {
-            huggingRightWall = true;
-        }
 
+            // Loop through the hits gameobjects to see if any are wall jump walls
+            for (int i = 0; i < count; i++) {
+                if (hitResults[i].collider.gameObject.tag == "WallJump") {
+                    huggingRightWallJumpWall = true;
+                }
+            }
+        }
     }
 
     // Override to determine when jumps are requested for physics object
@@ -141,11 +152,11 @@ public class PhysicsObject : MonoBehaviour {
 
             // Object has requested to jump while next to a wall
             // Has priority over falling off ledge jumping
-            else if (huggingRightWall || huggingLeftWall) {
-                if (huggingLeftWall) {
+            else if (huggingRightWallJumpWall || huggingLeftWallJumpWall) {
+                if (huggingLeftWallJumpWall) {
                     wallJumpSpeed = wallJumpSpeedMax;
                 }
-                if (huggingRightWall) {
+                if (huggingRightWallJumpWall) {
                     wallJumpSpeed = -wallJumpSpeedMax;
                 }
                 gravityCounteract = wallJumpCounteract;

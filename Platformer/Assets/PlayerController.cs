@@ -24,7 +24,7 @@ public class PlayerController : PhysicsObject
         // Movement with acceleration
         if (Input.GetKey(KeyCode.D)) {
             // If user is hugging a wall, set speed low to give more time for wall jump
-            if (huggingLeftWall && !grounded[0]) {
+            if (huggingLeftWallJumpWall && !grounded[0]) {
                 currentSpeed = wallMinSpeed;
             }
 
@@ -51,7 +51,7 @@ public class PlayerController : PhysicsObject
 
         if (Input.GetKey(KeyCode.A)) {
             // Lower speed when hugging wall for more accurate wall jumps
-            if (huggingRightWall && !grounded[0]) {
+            if (huggingRightWallJumpWall && !grounded[0]) {
                 currentSpeed = wallMinSpeed;
             }
 
