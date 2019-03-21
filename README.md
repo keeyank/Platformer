@@ -6,7 +6,7 @@ Inspired by games such as Super Meat Boy and Celeste, I constructed a 2d platfor
 
 
 
-##Features In-progress:
+## Features In-progress:
 - Level progression
 - Enemies with tracking AI
 - Menu screen 
@@ -14,7 +14,7 @@ Inspired by games such as Super Meat Boy and Celeste, I constructed a 2d platfor
 - PS4 controller support
 
 
-##Features Completed:
+## Features Completed:
 - Basic platformer physics ( i.e. gravity, and collision detection)
 - Smooth and responsive player controls
 - Modular grid based UI for level design
