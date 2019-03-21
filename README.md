@@ -1,19 +1,22 @@
 # Platformer
 
-This is a game I'm working on now that I have a little bit more Unity experience from my Strategy game!
+This game was created for the purpose of improving my knowledge in the Unity game developement environemnt.
 
-The goal is for me to create a very simple platformer, inspired by games like Super Meat Boy and Celeste. I intend only for this to be a learning experience for me, as it's a lot different from the previous game I made - This one actually makes use of physics!
+Inspired by games such as Super Meat Boy and Celeste, I constructed a 2d platformer that utilizes physics. When I began this project, I set out to implement my own physics engine instead of using Unity's built in components. This has resulted in a stronger grasp of how physics engines work in games. 
 
-One of the goals I had when I started this project was to fully create the physics myself and not use any of Unity's built in physics systems. Although it's really hard, so far I've been able to successfully replicate the physics that many platformer games use, all using my own unique code! 
 
-**Intended features:**
-- Simple platformer physics, including a gravity system and collision detection - ***Completed!***
-- Smooth and responsive player controls - ***Completed!***
+
+##Features In-progress:
+- Level progression
+- Enemies with tracking AI
+- Menu screen 
+- Selectable levels 
 - PS4 controller support
-- Simple grid based UI system to support easy level design - ***Completed!***
-- Level screen progression, and goalposts to finish levels
 
-**Optional features (if time permits):**
-- Wall jumping - ***Completed!***
-- Enemies with simple tracking AI
-- Menu screen and level select with unlockable levels
+
+##Features Completed:
+- Basic platformer physics ( i.e. gravity, and collision detection)
+- Smooth and responsive player controls
+- Modular grid based UI for level design
+- Wall Jumping
+
