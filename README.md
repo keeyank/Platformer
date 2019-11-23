@@ -1,8 +1,8 @@
 # Platformer
 
-This game was created for the purpose of improving my knowledge in the Unity game developement environemnt.
+This game was created to improve my knowledge in the Unity game development environment.
 
-Inspired by games such as Super Meat Boy and Celeste, I constructed a 2d platformer that utilizes physics. When I began this project, I set out to implement my own physics engine instead of using Unity's built in components. This implementation has given me a better understanding of how physics engines work in games. 
+Inspired by games such as Super Meat Boy and Celeste, I constructed a 2d platformer that utilizes a custom physics engine. Implementation of my own physics engine has given me a better understanding of how physics work in games. 
 
 
 
